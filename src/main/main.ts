@@ -234,6 +234,10 @@ function schedulePrompt() {
     console.log('Midnight reset - clearing daily state');
     store.delete('dailyFocusCompleted');
     store.delete('lastSnoozeTime');
+    // Show prompt immediately after midnight reset
+    setTimeout(() => {
+      checkAndShowPrompt();
+    }, 1000);
   }, {
     scheduled: true,
     timezone,
@@ -260,10 +264,31 @@ function checkAndShowPrompt() {
   
   const dailyCompleted = store.get('dailyFocusCompleted') as string | undefined;
   const lastSnoozeTime = store.get('lastSnoozeTime') as string | undefined;
+  const lastCheckDate = store.get('lastCheckDate') as string | undefined;
+  
+  // Check if it's a new day since last check
+  const isNewDay = !lastCheckDate || lastCheckDate !== today;
+  
+  if (isNewDay) {
+    console.log('New day detected - clearing daily state and showing prompt');
+    // Clear daily state on new day
+    store.delete('dailyFocusCompleted');
+    store.delete('lastSnoozeTime');
+    store.set('lastCheckDate', today);
+    
+    // Show prompt for new day
+    createWindow();
+    return;
+  }
   
   // Check if already completed today
   if (dailyCompleted === today) {
     console.log('Daily focus already completed for today');
+    // In development mode (npm start), always show window anyway
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Development mode - showing window anyway');
+      createWindow();
+    }
     return;
   }
   
@@ -370,25 +395,43 @@ ipcMain.on('submit-focus', async (_event: Electron.IpcMainEvent, data: { text: s
     
     // Show desktop after setting wallpaper
     try {
-      // Hide all applications and show desktop
-      execSync(`osascript -e 'tell application "System Events" to key code 103 using {command down}'`);
-      console.log('Desktop brought to front');
+      // Method 1: Try Mission Control to show desktop (like 4-finger swipe)
+      try {
+        execSync('osascript -e \'tell application "System Events" to key code 103\''); // F11 key
+        console.log('Desktop shown via Mission Control (F11)');
+      } catch (missionControlError) {
+        // Method 2: Try hiding all application windows
+        try {
+          execSync('osascript -e \'tell application "System Events" to set visible of every application process whose visible is true to false\'');
+          console.log('Desktop shown - all applications hidden');
+        } catch (hideError) {
+          // Method 3: Just show notification
+          execSync(`osascript -e 'display notification "Your focus wallpaper has been set! Check your desktop 🎯" with title "Temporal Focus"'`);
+          console.log('Desktop notification shown successfully');
+        }
+      }
     } catch (desktopError) {
-      console.log('Could not bring desktop to front:', desktopError);
+      console.log('Could not show desktop or notification:', desktopError);
+      console.log('Wallpaper set successfully - check your desktop!');
     }
     
     console.log('===================================');
     
-    // Hide the window instead of closing it
-    if (mainWindow) {
-      mainWindow.hide();
-    }
   } catch (error) {
     console.error('Error in submit-focus:', error);
     // Re-enable always on top even if there was an error
     if (mainWindow) {
       mainWindow.setAlwaysOnTop(true, 'screen-saver');
     }
+  }
+});
+
+// Handle window hide request
+ipcMain.on('hide-window', () => {
+  console.log('Hide window requested');
+  if (mainWindow) {
+    mainWindow.hide();
+    console.log('Window hidden after confetti animation');
   }
 });
 
@@ -410,6 +453,10 @@ ipcMain.on('snooze', (_event: Electron.IpcMainEvent, minutes: number) => {
 
 // App initialization
 app.whenReady().then(async () => {
+  console.log('========== Temporal Focus Starting ==========');
+  console.log('Current time:', new Date().toLocaleString());
+  console.log('Environment:', process.env.NODE_ENV || 'development');
+  
   // Hide from dock completely
   if (process.platform === 'darwin') {
     app.dock.hide();
@@ -435,11 +482,19 @@ app.whenReady().then(async () => {
   // Create tray icon first before creating any windows
   createTrayIcon();
   
-  // Schedule daily prompt
+  // Schedule daily prompt (includes immediate check)
   schedulePrompt();
   
-  // Show window immediately on first launch
-  createWindow();
+  // In development mode, always show window immediately
+  if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
+    console.log('Development mode - showing window immediately');
+    setTimeout(() => {
+      createWindow();
+    }, 1000); // Small delay to ensure tray is created first
+  }
+  
+  console.log('Initialization complete');
+  console.log('=====================================');
 
   app.on('activate', () => {
     // On macOS, create window on activate for immediate visibility

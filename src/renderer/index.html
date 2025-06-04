@@ -456,10 +456,15 @@
             background: #1a1a1a;
             pointer-events: none;
             z-index: 9999;
+            border-radius: 50%;
         }
 
         .confetti.white {
             background: white;
+        }
+
+        .confetti.square {
+            border-radius: 0;
         }
 
         @keyframes confetti-fall {
@@ -471,6 +476,10 @@
                 transform: translateY(100vh) rotate(720deg);
                 opacity: 0;
             }
+        }
+
+        .confetti.animate {
+            animation: confetti-fall linear forwards;
         }
 
         /* Animations */
@@ -586,23 +595,36 @@
         }
 
         function createConfetti() {
-            const colors = ['#1a1a1a', 'white'];
             const confettiCount = 50;
             
             for (let i = 0; i < confettiCount; i++) {
                 const confetti = document.createElement('div');
-                confetti.className = `confetti ${Math.random() > 0.5 ? 'white' : ''}`;
+                const isWhite = Math.random() > 0.5;
+                const isSquare = Math.random() > 0.5;
+                
+                confetti.className = `confetti ${isWhite ? 'white' : ''} ${isSquare ? 'square' : ''}`;
                 confetti.style.left = Math.random() * 100 + '%';
-                confetti.style.animationDuration = (Math.random() * 3 + 2) + 's';
-                confetti.style.animationDelay = Math.random() * 2 + 's';
-                confetti.style.animation = 'confetti-fall linear forwards';
+                confetti.style.top = '-10px';
+                
+                // Much faster animation - between 1-2 seconds instead of 2-5 seconds
+                const duration = (Math.random() * 1 + 1) + 's'; // 1-2 seconds
+                const delay = '0s'; // No delay - start immediately
+                
+                confetti.style.animationDuration = duration;
+                confetti.style.animationDelay = delay;
                 
                 document.body.appendChild(confetti);
                 
-                // Remove confetti after animation
+                // Force reflow and add animation class
+                confetti.offsetHeight;
+                confetti.classList.add('animate');
+                
+                // Remove confetti after animation - no delay needed since delay is 0
                 setTimeout(() => {
-                    confetti.remove();
-                }, 5000);
+                    if (confetti.parentNode) {
+                        confetti.remove();
+                    }
+                }, parseFloat(duration) * 1000 + 500);
             }
         }
 
@@ -857,10 +879,10 @@
                 const wallpaperDataUrl = generateWallpaper(focusItems);
                 ipcRenderer.send('submit-focus', { text: focusItems.join('\n'), wallpaperDataUrl });
                 
-                // Close window after a brief delay to show confetti
+                // Hide window after confetti animation completes (2.5 seconds to let 1-2 second animation finish)
                 setTimeout(() => {
-                    window.close();
-                }, 1000);
+                    ipcRenderer.send('hide-window');
+                }, 2500);
             }
         }
 
