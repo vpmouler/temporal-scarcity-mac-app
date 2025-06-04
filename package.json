@@ -1,6 +1,6 @@
 {
   "name": "temporal-focus",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Temporal focus prompt and wallpaper setter",
   "author": {
     "name": "Seva Mouler",
@@ -42,7 +42,10 @@
     "prepare-dmg": "node scripts/build-dmg-assets.js",
     "preview-dmg": "node scripts/preview-dmg.js",
     "test-dmg": "node scripts/test-dmg.js",
-    "build-final": "node scripts/test-dmg.js && electron-builder --mac dmg --arm64"
+    "build-final": "node scripts/test-dmg.js && electron-builder --mac dmg --arm64",
+    "release:patch": "npm version patch && npm run dist:mac",
+    "release:minor": "npm version minor && npm run dist:mac",
+    "release:major": "npm version major && npm run dist:mac"
   },
   "build": {
     "appId": "com.temporalfocus.app",
