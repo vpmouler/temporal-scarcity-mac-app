@@ -1,0 +1,113 @@
+{
+  "name": "temporal-focus",
+  "version": "1.1.0",
+  "description": "Temporal focus prompt and wallpaper setter",
+  "author": {
+    "name": "Seva Mouler",
+    "email": "seva@sevamouler.com",
+    "url": "https://sevamouler.com"
+  },
+  "homepage": "https://sevamouler.com",
+  "license": "MIT",
+  "copyright": "Copyright © 2025 Seva Mouler",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vpmouler/temporal-scarcity-mac-app"
+  },
+  "bugs": {
+    "url": "https://github.com/vpmouler/temporal-scarcity-mac-app/issues",
+    "email": "seva@sevamouler.com"
+  },
+  "keywords": [
+    "productivity",
+    "focus",
+    "time-management",
+    "pomodoro",
+    "temporal-scarcity",
+    "mac-app",
+    "menubar",
+    "wallpaper",
+    "electron"
+  ],
+  "main": "./dist/main/main.js",
+  "scripts": {
+    "start": "npm run build && electron .",
+    "build": "tsc && npm run copy-assets",
+    "copy-assets": "mkdir -p dist/renderer dist/assets && cp src/renderer/index.html dist/renderer/ && cp src/assets/* dist/assets/ && mkdir -p dist/build/icons && cp build/icons/* dist/build/icons/ || true",
+    "watch": "tsc -w",
+    "dev": "npm run build && electron .",
+    "dist": "npm run build && node scripts/build-dmg-assets.js && electron-builder",
+    "dist:mac": "npm run build && node scripts/build-dmg-assets.js && electron-builder --mac",
+    "postinstall": "electron-builder install-app-deps",
+    "prepare-dmg": "node scripts/build-dmg-assets.js",
+    "preview-dmg": "node scripts/preview-dmg.js",
+    "test-dmg": "node scripts/test-dmg.js",
+    "build-final": "node scripts/test-dmg.js && electron-builder --mac dmg --arm64"
+  },
+  "build": {
+    "appId": "com.temporalfocus.app",
+    "productName": "Temporal Focus",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "node_modules/**/*",
+      "package.json",
+      "build/icons/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "icon": "build/icons/icon.png"
+    },
+    "dmg": {
+      "title": "Install Temporal Focus",
+      "format": "UDZO",
+      "background": "assets/dmg-background.png",
+      "icon": "build/icons/icon.png",
+      "window": {
+        "width": 540,
+        "height": 400,
+        "x": 200,
+        "y": 100
+      },
+      "iconSize": 80,
+      "contents": [
+        {
+          "x": 180,
+          "y": 120,
+          "type": "file",
+          "name": "Temporal Focus"
+        },
+        {
+          "x": 480,
+          "y": 240,
+          "type": "link",
+          "path": "/Applications",
+          "name": "Applications"
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "electron-store": "^8.1.0",
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.24",
+    "@types/node-cron": "^3.0.11",
+    "electron": "^29.1.0",
+    "electron-builder": "^24.12.0",
+    "typescript": "^5.3.3"
+  }
+} 
+
+

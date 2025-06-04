@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Temporal Focus</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #fafafa;
+            color: #1a1a1a;
+            user-select: none;
+            -webkit-app-region: drag;
+            height: 100vh;
+            overflow: hidden;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 32px;
+            -webkit-app-region: drag;
+        }
+
+        .header {
+            flex-shrink: 0;
+            text-align: center;
+            margin-bottom: 32px;
+            -webkit-app-region: drag;
+        }
+
+        .question {
+            font-family: 'Crimson Text', serif;
+            font-size: 20px;
+            font-weight: 400;
+            line-height: 1.5;
+            color: #2a2a2a;
+            margin-bottom: 40px;
+            font-style: italic;
+            -webkit-app-region: drag;
+        }
+
+        .credit {
+            font-size: 11px;
+            color: #888;
+            font-style: italic;
+            margin-bottom: 24px;
+            -webkit-app-region: drag;
+        }
+
+        .credit a {
+            color: #666;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .credit a:hover {
+            color: #333;
+        }
+
+        .input-section {
+            -webkit-app-region: no-drag;
+            margin-bottom: 24px;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 8px;
+            border: 1px solid #e1e1e1;
+            border-radius: 6px;
+            padding: 4px;
+            background: white;
+            transition: border-color 0.2s ease;
+            -webkit-app-region: no-drag;
+        }
+
+        .input-container:focus-within {
+            border-color: #666;
+        }
+
+        input {
+            flex-grow: 1;
+            padding: 12px 16px;
+            border: none;
+            background: transparent;
+            color: #1a1a1a;
+            font-size: 15px;
+            font-weight: 400;
+            outline: none;
+            font-family: 'Inter', sans-serif;
+            -webkit-app-region: no-drag;
+        }
+
+        input::placeholder {
+            color: #888;
+            font-weight: 300;
+        }
+
+        .add-btn {
+            padding: 12px 16px;
+            background: #1a1a1a;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            font-family: 'Inter', sans-serif;
+            -webkit-app-region: no-drag;
+        }
+
+        .add-btn:hover {
+            background: #333;
+        }
+
+        .content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            -webkit-app-region: no-drag;
+        }
+
+        .items-container {
+            flex-grow: 1;
+            border: 1px solid #e1e1e1;
+            border-radius: 8px;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            min-height: 200px;
+            -webkit-app-region: no-drag;
+        }
+
+        .items-list {
+            flex-grow: 1;
+            padding: 16px;
+            overflow-y: auto;
+            -webkit-app-region: no-drag;
+        }
+
+        .items-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .items-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .items-list::-webkit-scrollbar-thumb {
+            background: #ddd;
+            border-radius: 3px;
+        }
+
+        .items-list::-webkit-scrollbar-thumb:hover {
+            background: #bbb;
+        }
+
+        .item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #f5f5f5;
+            cursor: grab;
+            transition: opacity 0.2s ease;
+            -webkit-app-region: no-drag;
+        }
+
+        .item:last-child {
+            border-bottom: none;
+        }
+
+        .item:hover {
+            opacity: 0.8;
+        }
+
+        .item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .drag-handle {
+            color: #ccc;
+            font-size: 12px;
+            cursor: grab;
+            padding-top: 2px;
+            width: 16px;
+            text-align: center;
+            -webkit-app-region: no-drag;
+        }
+
+        .bullet {
+            width: 4px;
+            height: 4px;
+            background: #666;
+            border-radius: 50%;
+            margin-top: 8px;
+            flex-shrink: 0;
+            -webkit-app-region: no-drag;
+        }
+
+        .item-text {
+            flex-grow: 1;
+            font-size: 15px;
+            color: #2a2a2a;
+            line-height: 1.5;
+            font-weight: 400;
+            -webkit-app-region: no-drag;
+        }
+
+        .remove-btn {
+            color: #ccc;
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            -webkit-app-region: no-drag;
+        }
+
+        .remove-btn:hover {
+            color: #666;
+            background: #f5f5f5;
+        }
+
+        .empty-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #888;
+            font-style: italic;
+            font-size: 14px;
+            text-align: center;
+            padding: 40px 20px;
+            -webkit-app-region: no-drag;
+        }
+
+        .footer {
+            flex-shrink: 0;
+            margin-top: 24px;
+            -webkit-app-region: no-drag;
+        }
+
+        .main-buttons {
+            display: flex;
+            gap: 12px;
+            -webkit-app-region: no-drag;
+        }
+
+        .main-btn {
+            flex: 1;
+            padding: 16px;
+            border: 1px solid #e1e1e1;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif;
+            background: white;
+            -webkit-app-region: no-drag;
+        }
+
+        .submit-btn {
+            background: #1a1a1a;
+            color: white;
+            border-color: #1a1a1a;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            background: #333;
+            border-color: #333;
+        }
+
+        .submit-btn:disabled {
+            background: #f5f5f5;
+            color: #ccc;
+            border-color: #e1e1e1;
+            cursor: not-allowed;
+        }
+
+        .postpone-btn {
+            color: #666;
+            position: relative;
+            width: 100%;
+        }
+
+        .postpone-btn:hover {
+            background: #f5f5f5;
+            border-color: #ccc;
+        }
+
+        .cancel-btn {
+            color: #666;
+        }
+
+        .cancel-btn:hover {
+            background: #f5f5f5;
+            border-color: #ccc;
+        }
+
+        .postpone-dropdown {
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e1e1e1;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 8px;
+            padding: 8px;
+            display: none;
+            z-index: 1000;
+            -webkit-app-region: no-drag;
+        }
+
+        .postpone-dropdown.show {
+            display: block;
+        }
+
+        .postpone-option {
+            display: block;
+            width: 100%;
+            padding: 8px 12px;
+            background: transparent;
+            border: none;
+            text-align: left;
+            font-size: 14px;
+            color: #666;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+            font-family: 'Inter', sans-serif;
+            -webkit-app-region: no-drag;
+        }
+
+        .postpone-option:hover {
+            background: #f5f5f5;
+        }
+
+        #wallpaperCanvas {
+            display: none;
+        }
+
+        /* Animations */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .item {
+            animation: slideIn 0.3s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="question">
+                "If today was the only day you worked this week,<br>what would you want to ensure you finished?"
+            </div>
+            
+            <div class="input-section">
+                <div class="input-container">
+                    <input type="text" id="focus-input" placeholder="Enter your focus..." autofocus>
+                    <button class="add-btn" id="add-item">Add</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="items-container">
+                <div class="items-list" id="items-list">
+                    <div class="empty-state">
+                        Your daily intentions will appear here
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <div class="main-buttons">
+                <button class="main-btn submit-btn" id="submit" disabled>Set Daily Focus</button>
+                <div style="position: relative; flex: 1;">
+                    <button class="main-btn postpone-btn" id="postpone">Postpone</button>
+                    <div class="postpone-dropdown" id="postpone-dropdown">
+                        <button class="postpone-option" data-minutes="30">30m</button>
+                        <button class="postpone-option" data-minutes="60">1h</button>
+                        <button class="postpone-option" data-minutes="120">2h</button>
+                        <button class="postpone-option" data-minutes="360">6h</button>
+                    </div>
+                </div>
+                <button class="main-btn cancel-btn" id="cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <canvas id="wallpaperCanvas" width="2560" height="1600"></canvas>
+    
+    <script>
+        const { ipcRenderer } = require('electron');
+        
+        let focusItems = [];
+        let draggedIndex = -1;
+
+        function addItem() {
+            const input = document.getElementById('focus-input');
+            const text = input.value.trim();
+            
+            if (text && text.length > 0) {
+                focusItems.push(text);
+                updateItemsList();
+                input.value = '';
+                input.focus();
+            }
+        }
+
+        function removeItem(index) {
+            focusItems.splice(index, 1);
+            updateItemsList();
+        }
+
+        function moveItem(fromIndex, toIndex) {
+            const item = focusItems.splice(fromIndex, 1)[0];
+            focusItems.splice(toIndex, 0, item);
+            updateItemsList();
+        }
+
+        function updateItemsList() {
+            const list = document.getElementById('items-list');
+            const submitBtn = document.getElementById('submit');
+            
+            if (focusItems.length === 0) {
+                list.innerHTML = '<div class="empty-state">Your daily intentions will appear here</div>';
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Set Daily Focus';
+                return;
+            }
+            
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Set Daily Focus';
+            
+            list.innerHTML = '';
+            
+            focusItems.forEach((item, index) => {
+                const itemElement = document.createElement('div');
+                itemElement.className = 'item';
+                itemElement.draggable = true;
+                itemElement.dataset.index = index;
+                itemElement.innerHTML = `
+                    <div class="drag-handle">⋮⋮</div>
+                    <div class="bullet"></div>
+                    <div class="item-text">${item}</div>
+                    <button class="remove-btn" data-index="${index}">×</button>
+                `;
+                
+                // Add event listeners
+                const removeBtn = itemElement.querySelector('.remove-btn');
+                removeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const idx = parseInt(e.target.getAttribute('data-index'));
+                    removeItem(idx);
+                });
+                
+                // Drag and drop
+                itemElement.addEventListener('dragstart', (e) => {
+                    draggedIndex = index;
+                    itemElement.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+                
+                itemElement.addEventListener('dragend', () => {
+                    itemElement.classList.remove('dragging');
+                    draggedIndex = -1;
+                });
+                
+                itemElement.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                });
+                
+                itemElement.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    if (draggedIndex !== -1 && draggedIndex !== index) {
+                        moveItem(draggedIndex, index);
+                    }
+                });
+                
+                list.appendChild(itemElement);
+            });
+        }
+        
+        function generateWallpaper(items) {
+            const canvas = document.getElementById('wallpaperCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Set background to dark/black
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Add date
+            const date = new Date().toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '48px "Inter", -apple-system, BlinkMacSystemFont, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(date, canvas.width / 2, canvas.height / 4);
+            
+            // Add focus items with bullets
+            ctx.font = '48px "Inter", -apple-system, BlinkMacSystemFont, sans-serif';
+            ctx.fontWeight = '400';
+            
+            const lineHeight = 70;
+            const startY = canvas.height / 2 - (items.length * lineHeight) / 2;
+            
+            items.forEach((item, index) => {
+                // Word wrap each item
+                const words = item.split(' ');
+                const lines = [];
+                let currentLine = '';
+                const maxWidth = canvas.width * 0.8;
+                
+                words.forEach(word => {
+                    const testLine = currentLine + (currentLine ? ' ' : '') + word;
+                    const metrics = ctx.measureText(testLine);
+                    
+                    if (metrics.width > maxWidth && currentLine !== '') {
+                        lines.push(currentLine);
+                        currentLine = word;
+                    } else {
+                        currentLine = testLine;
+                    }
+                });
+                
+                if (currentLine !== '') {
+                    lines.push(currentLine);
+                }
+                
+                // Draw the wrapped text for this item with bullet
+                lines.forEach((line, lineIndex) => {
+                    const y = startY + (index * lineHeight * 1.2) + (lineIndex * lineHeight);
+                    ctx.fillText(`• ${line}`, canvas.width / 2, y);
+                });
+            });
+            
+            return canvas.toDataURL('image/png');
+        }
+        
+        // Event listeners
+        document.getElementById('focus-input').addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') {
+                addItem();
+            } else if (e.key === 'Escape') {
+                window.close();
+            }
+        });
+
+        document.getElementById('add-item').addEventListener('click', addItem);
+        document.getElementById('submit').addEventListener('click', submitFocus);
+        document.getElementById('cancel').addEventListener('click', () => window.close());
+
+        // Postpone dropdown
+        document.getElementById('postpone').addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            const dropdown = document.getElementById('postpone-dropdown');
+            dropdown.classList.toggle('show');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('postpone-dropdown');
+            const postponeBtn = document.getElementById('postpone');
+            if (!dropdown.contains(e.target) && !postponeBtn.contains(e.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+
+        document.querySelectorAll('.postpone-option').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                const minutes = parseInt(btn.dataset.minutes);
+                ipcRenderer.send('snooze', minutes);
+            });
+        });
+
+        function submitFocus() {
+            if (focusItems.length > 0) {
+                const wallpaperDataUrl = generateWallpaper(focusItems);
+                ipcRenderer.send('submit-focus', { text: focusItems.join('\n'), wallpaperDataUrl });
+                window.close();
+            }
+        }
+
+        // Initialize
+        updateItemsList();
+    </script>
+</body>
+</html> 
