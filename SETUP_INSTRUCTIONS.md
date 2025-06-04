@@ -12,7 +12,7 @@
 
 ### 3. **Set Your Daily Intentions**
 - Add what you want to focus on today using the input field
-- Use the **⋮⋮** drag handle to reorder items by priority
+- Reorder items by priority
 - Click **"Set Daily Focus"** when ready (the button will pulse when items are added)
 
 ### 4. **Accept System Permissions**

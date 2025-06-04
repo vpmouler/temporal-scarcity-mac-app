@@ -11,7 +11,7 @@ A minimalist desktop application that prompts you with a daily focus question an
 ## ✨ Features
 
 - **Daily Prompt**: Asks you "If today was the only day you worked this week, what would you want to ensure you got done?"
-- **Multiple Focus Items**: Add multiple tasks with drag-and-drop reordering
+- **Multiple Focus Items**: Add multiple tasks with up/down reorder buttons
 - **Wallpaper Generation**: Creates a minimalist black wallpaper with your focus items
 - **Smart Scheduling**: 
   - Appears when you open your laptop each day

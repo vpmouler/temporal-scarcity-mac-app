@@ -48,24 +48,6 @@
             -webkit-app-region: drag;
         }
 
-        .credit {
-            font-size: 11px;
-            color: #888;
-            font-style: italic;
-            margin-bottom: 24px;
-            -webkit-app-region: drag;
-        }
-
-        .credit a {
-            color: #666;
-            text-decoration: none;
-            transition: color 0.2s ease;
-        }
-
-        .credit a:hover {
-            color: #333;
-        }
-
         .input-section {
             -webkit-app-region: no-drag;
             margin-bottom: 24px;
@@ -138,6 +120,7 @@
             display: flex;
             flex-direction: column;
             min-height: 200px;
+            max-height: 400px;
             -webkit-app-region: no-drag;
         }
 
@@ -146,6 +129,7 @@
             padding: 16px;
             overflow-y: auto;
             -webkit-app-region: no-drag;
+            position: relative;
         }
 
         .items-list::-webkit-scrollbar {
@@ -167,46 +151,65 @@
 
         .item {
             display: flex;
-            align-items: flex-start;
+            align-items: center;
             gap: 12px;
-            padding: 12px 0;
+            padding: 12px;
             border-bottom: 1px solid #f5f5f5;
-            cursor: grab;
-            transition: opacity 0.2s ease;
+            transition: opacity 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
             -webkit-app-region: no-drag;
             position: relative;
+            animation: slideIn 0.3s ease-out;
+            cursor: default;
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 4px;
+        }
+
+        .item:hover {
+            background: #f8f8f8;
         }
 
         .item:last-child {
             border-bottom: none;
+            margin-bottom: 0;
         }
 
-        .item:hover {
-            opacity: 0.8;
+        .reorder-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex-shrink: 0;
         }
 
-        .item.dragging {
-            opacity: 0.5;
-            cursor: grabbing;
-        }
-
-        .item.drag-over {
-            border-top: 2px solid #666;
-        }
-
-        .drag-handle {
-            color: #ccc;
-            font-size: 12px;
-            cursor: grab;
-            padding-top: 2px;
-            width: 16px;
-            text-align: center;
+        .reorder-btn {
+            width: 20px;
+            height: 16px;
+            border: none;
+            background: #f0f0f0;
+            color: #666;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
             -webkit-app-region: no-drag;
-            user-select: none;
         }
 
-        .drag-handle:hover {
-            color: #999;
+        .reorder-btn:hover {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .reorder-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .reorder-btn:disabled:hover {
+            background: #f0f0f0;
+            color: #666;
         }
 
         .bullet {
@@ -214,7 +217,6 @@
             height: 4px;
             background: #666;
             border-radius: 50%;
-            margin-top: 8px;
             flex-shrink: 0;
             -webkit-app-region: no-drag;
         }
@@ -243,6 +245,7 @@
             border-radius: 50%;
             transition: all 0.2s ease;
             -webkit-app-region: no-drag;
+            flex-shrink: 0;
         }
 
         .remove-btn:hover {
@@ -493,25 +496,6 @@
                 transform: translateY(0);
             }
         }
-
-        .item {
-            animation: slideIn 0.3s ease-out;
-        }
-
-        /* Drop zone indicator */
-        .drop-zone {
-            border: 2px dashed #ccc;
-            border-radius: 4px;
-            margin: 4px 0;
-            height: 8px;
-            opacity: 0;
-            transition: opacity 0.2s ease;
-        }
-
-        .drop-zone.active {
-            opacity: 1;
-            border-color: #666;
-        }
     </style>
 </head>
 <body>
@@ -521,7 +505,7 @@
             <div class="instructions-text">
                 <strong>Getting Started:</strong><br><br>
                 1. <strong>Set Your Daily Intention(s):</strong> Add what you want to focus on today<br><br>
-                2. <strong>Drag to Reorder:</strong> Use the ⋮⋮ handle to drag items up/down<br><br>
+                2. <strong>Reorder Items:</strong> Use the ▲▼ buttons to move items up or down<br><br>
                 3. <strong>Accept Permissions:</strong> Allow the app to change your desktop background when prompted<br><br>
                 4. <strong>Your Focus Wallpaper:</strong> Once set, your intentions will appear as your desktop background to keep you focused throughout the day!
             </div>
@@ -576,8 +560,6 @@
         const { ipcRenderer } = require('electron');
         
         let focusItems = [];
-        let draggedIndex = -1;
-        let draggedElement = null;
 
         // Listen for first-time instructions event
         ipcRenderer.on('show-first-time-instructions', () => {
@@ -645,14 +627,6 @@
             updateItemsList();
         }
 
-        function moveItem(fromIndex, toIndex) {
-            if (fromIndex === toIndex) return;
-            
-            const item = focusItems.splice(fromIndex, 1)[0];
-            focusItems.splice(toIndex, 0, item);
-            updateItemsList();
-        }
-
         function updateItemsList() {
             const list = document.getElementById('items-list');
             const submitBtn = document.getElementById('submit');
@@ -671,105 +645,56 @@
             
             list.innerHTML = '';
             
-            focusItems.forEach((item, index) => {
-                // Add drop zone before each item
-                const dropZone = document.createElement('div');
-                dropZone.className = 'drop-zone';
-                dropZone.dataset.index = index;
-                list.appendChild(dropZone);
-                
+            focusItems.forEach((itemText, index) => {
                 const itemElement = document.createElement('div');
                 itemElement.className = 'item';
-                itemElement.draggable = true;
                 itemElement.dataset.index = index;
                 itemElement.innerHTML = `
-                    <div class="drag-handle">⋮⋮</div>
+                    <div class="reorder-buttons">
+                        <button class="reorder-btn" data-action="up" data-index="${index}" ${index === 0 ? 'disabled' : ''}>▲</button>
+                        <button class="reorder-btn" data-action="down" data-index="${index}" ${index === focusItems.length - 1 ? 'disabled' : ''}>▼</button>
+                    </div>
                     <div class="bullet"></div>
-                    <div class="item-text">${item}</div>
+                    <div class="item-text">${itemText}</div>
                     <button class="remove-btn" data-index="${index}">×</button>
                 `;
                 
-                // Add event listeners for remove button
                 const removeBtn = itemElement.querySelector('.remove-btn');
                 removeBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    const idx = parseInt(e.target.getAttribute('data-index'));
-                    removeItem(idx);
+                    const idxToRemove = parseInt(e.currentTarget.getAttribute('data-index'));
+                    removeItem(idxToRemove);
                 });
-                
-                // Drag and drop event listeners
-                itemElement.addEventListener('dragstart', (e) => {
-                    draggedIndex = index;
-                    draggedElement = itemElement;
-                    itemElement.classList.add('dragging');
-                    e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('text/html', itemElement.outerHTML);
-                });
-                
-                itemElement.addEventListener('dragend', (e) => {
-                    itemElement.classList.remove('dragging');
-                    draggedIndex = -1;
-                    draggedElement = null;
-                    
-                    // Remove all drop zone highlights
-                    document.querySelectorAll('.drop-zone').forEach(zone => {
-                        zone.classList.remove('active');
+
+                // Add reorder button event listeners
+                const reorderBtns = itemElement.querySelectorAll('.reorder-btn');
+                reorderBtns.forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        const action = btn.dataset.action;
+                        const idx = parseInt(btn.dataset.index);
+                        moveItem(idx, action);
                     });
-                });
-                
-                // Drop zone event listeners
-                dropZone.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = 'move';
-                    dropZone.classList.add('active');
-                });
-                
-                dropZone.addEventListener('dragleave', (e) => {
-                    dropZone.classList.remove('active');
-                });
-                
-                dropZone.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    dropZone.classList.remove('active');
-                    
-                    if (draggedIndex !== -1) {
-                        const targetIndex = parseInt(dropZone.dataset.index);
-                        moveItem(draggedIndex, targetIndex);
-                    }
                 });
                 
                 list.appendChild(itemElement);
             });
-            
-            // Add final drop zone at the end
-            const finalDropZone = document.createElement('div');
-            finalDropZone.className = 'drop-zone';
-            finalDropZone.dataset.index = focusItems.length;
-            
-            finalDropZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-                finalDropZone.classList.add('active');
-            });
-            
-            finalDropZone.addEventListener('dragleave', (e) => {
-                finalDropZone.classList.remove('active');
-            });
-            
-            finalDropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                finalDropZone.classList.remove('active');
-                
-                if (draggedIndex !== -1) {
-                    const targetIndex = parseInt(finalDropZone.dataset.index);
-                    moveItem(draggedIndex, targetIndex - 1);
-                }
-            });
-            
-            list.appendChild(finalDropZone);
         }
-        
+
+        function moveItem(index, direction) {
+            if (direction === 'up' && index > 0) {
+                // Swap with previous item
+                [focusItems[index - 1], focusItems[index]] = [focusItems[index], focusItems[index - 1]];
+                updateItemsList();
+            } else if (direction === 'down' && index < focusItems.length - 1) {
+                // Swap with next item
+                [focusItems[index], focusItems[index + 1]] = [focusItems[index + 1], focusItems[index]];
+                updateItemsList();
+            }
+        }
+
         function generateWallpaper(items) {
             const canvas = document.getElementById('wallpaperCanvas');
             const ctx = canvas.getContext('2d');
@@ -882,7 +807,7 @@
                 // Hide window after confetti animation completes (2.5 seconds to let 1-2 second animation finish)
                 setTimeout(() => {
                     ipcRenderer.send('hide-window');
-                }, 2500);
+                }, 1770);
             }
         }
 

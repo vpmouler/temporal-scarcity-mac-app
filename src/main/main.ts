@@ -393,7 +393,28 @@ ipcMain.on('submit-focus', async (_event: Electron.IpcMainEvent, data: { text: s
     
     console.log('Wallpaper set successfully');
     
-    // Show desktop after setting wallpaper
+    // Don't show desktop yet - wait for hide-window event
+    console.log('Waiting for animation to complete before showing desktop...');
+    
+    console.log('===================================');
+    
+  } catch (error) {
+    console.error('Error in submit-focus:', error);
+    // Re-enable always on top even if there was an error
+    if (mainWindow) {
+      mainWindow.setAlwaysOnTop(true, 'screen-saver');
+    }
+  }
+});
+
+// Handle window hide request
+ipcMain.on('hide-window', () => {
+  console.log('Hide window requested');
+  if (mainWindow) {
+    mainWindow.hide();
+    console.log('Window hidden after confetti animation');
+    
+    // Now show the desktop
     try {
       // Method 1: Try Mission Control to show desktop (like 4-finger swipe)
       try {
@@ -414,24 +435,6 @@ ipcMain.on('submit-focus', async (_event: Electron.IpcMainEvent, data: { text: s
       console.log('Could not show desktop or notification:', desktopError);
       console.log('Wallpaper set successfully - check your desktop!');
     }
-    
-    console.log('===================================');
-    
-  } catch (error) {
-    console.error('Error in submit-focus:', error);
-    // Re-enable always on top even if there was an error
-    if (mainWindow) {
-      mainWindow.setAlwaysOnTop(true, 'screen-saver');
-    }
-  }
-});
-
-// Handle window hide request
-ipcMain.on('hide-window', () => {
-  console.log('Hide window requested');
-  if (mainWindow) {
-    mainWindow.hide();
-    console.log('Window hidden after confetti animation');
   }
 });
 
