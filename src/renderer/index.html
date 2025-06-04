@@ -174,6 +174,7 @@
             cursor: grab;
             transition: opacity 0.2s ease;
             -webkit-app-region: no-drag;
+            position: relative;
         }
 
         .item:last-child {
@@ -189,6 +190,10 @@
             cursor: grabbing;
         }
 
+        .item.drag-over {
+            border-top: 2px solid #666;
+        }
+
         .drag-handle {
             color: #ccc;
             font-size: 12px;
@@ -197,6 +202,11 @@
             width: 16px;
             text-align: center;
             -webkit-app-region: no-drag;
+            user-select: none;
+        }
+
+        .drag-handle:hover {
+            color: #999;
         }
 
         .bullet {
@@ -277,6 +287,8 @@
             font-family: 'Inter', sans-serif;
             background: white;
             -webkit-app-region: no-drag;
+            position: relative;
+            overflow: hidden;
         }
 
         .submit-btn {
@@ -295,6 +307,21 @@
             color: #ccc;
             border-color: #e1e1e1;
             cursor: not-allowed;
+        }
+
+        .submit-btn.animated {
+            animation: borderPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes borderPulse {
+            0%, 100% {
+                border-color: #1a1a1a;
+                box-shadow: 0 0 0 0 rgba(26, 26, 26, 0.4);
+            }
+            50% {
+                border-color: #333;
+                box-shadow: 0 0 0 8px rgba(26, 26, 26, 0);
+            }
         }
 
         .postpone-btn {
@@ -361,6 +388,91 @@
             display: none;
         }
 
+        /* First-time instructions modal */
+        .instructions-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            -webkit-app-region: no-drag;
+        }
+
+        .instructions-modal.show {
+            display: flex;
+        }
+
+        .instructions-content {
+            background: white;
+            padding: 32px;
+            border-radius: 12px;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            -webkit-app-region: no-drag;
+        }
+
+        .instructions-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1a1a1a;
+        }
+
+        .instructions-text {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #666;
+            margin-bottom: 24px;
+        }
+
+        .instructions-btn {
+            background: #1a1a1a;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .instructions-btn:hover {
+            background: #333;
+        }
+
+        /* Confetti animation */
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: #1a1a1a;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .confetti.white {
+            background: white;
+        }
+
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(-100vh) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
         /* Animations */
         @keyframes slideIn {
             from {
@@ -376,9 +488,38 @@
         .item {
             animation: slideIn 0.3s ease-out;
         }
+
+        /* Drop zone indicator */
+        .drop-zone {
+            border: 2px dashed #ccc;
+            border-radius: 4px;
+            margin: 4px 0;
+            height: 8px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .drop-zone.active {
+            opacity: 1;
+            border-color: #666;
+        }
     </style>
 </head>
 <body>
+    <div class="instructions-modal" id="instructions-modal">
+        <div class="instructions-content">
+            <div class="instructions-title">Welcome to Temporal Focus! 🎯</div>
+            <div class="instructions-text">
+                <strong>Getting Started:</strong><br><br>
+                1. <strong>Set Your Daily Intention(s):</strong> Add what you want to focus on today<br><br>
+                2. <strong>Drag to Reorder:</strong> Use the ⋮⋮ handle to drag items up/down<br><br>
+                3. <strong>Accept Permissions:</strong> Allow the app to change your desktop background when prompted<br><br>
+                4. <strong>Your Focus Wallpaper:</strong> Once set, your intentions will appear as your desktop background to keep you focused throughout the day!
+            </div>
+            <button class="instructions-btn" id="close-instructions">Let's Start!</button>
+        </div>
+    </div>
+
     <div class="container">
         <div class="header">
             <div class="question">
@@ -427,6 +568,43 @@
         
         let focusItems = [];
         let draggedIndex = -1;
+        let draggedElement = null;
+
+        // Listen for first-time instructions event
+        ipcRenderer.on('show-first-time-instructions', () => {
+            showInstructions();
+        });
+
+        function showInstructions() {
+            const modal = document.getElementById('instructions-modal');
+            modal.classList.add('show');
+        }
+
+        function hideInstructions() {
+            const modal = document.getElementById('instructions-modal');
+            modal.classList.remove('show');
+        }
+
+        function createConfetti() {
+            const colors = ['#1a1a1a', 'white'];
+            const confettiCount = 50;
+            
+            for (let i = 0; i < confettiCount; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = `confetti ${Math.random() > 0.5 ? 'white' : ''}`;
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                confetti.style.animationDelay = Math.random() * 2 + 's';
+                confetti.style.animation = 'confetti-fall linear forwards';
+                
+                document.body.appendChild(confetti);
+                
+                // Remove confetti after animation
+                setTimeout(() => {
+                    confetti.remove();
+                }, 5000);
+            }
+        }
 
         function addItem() {
             const input = document.getElementById('focus-input');
@@ -446,6 +624,8 @@
         }
 
         function moveItem(fromIndex, toIndex) {
+            if (fromIndex === toIndex) return;
+            
             const item = focusItems.splice(fromIndex, 1)[0];
             focusItems.splice(toIndex, 0, item);
             updateItemsList();
@@ -458,16 +638,24 @@
             if (focusItems.length === 0) {
                 list.innerHTML = '<div class="empty-state">Your daily intentions will appear here</div>';
                 submitBtn.disabled = true;
+                submitBtn.classList.remove('animated');
                 submitBtn.textContent = 'Set Daily Focus';
                 return;
             }
             
             submitBtn.disabled = false;
+            submitBtn.classList.add('animated');
             submitBtn.textContent = 'Set Daily Focus';
             
             list.innerHTML = '';
             
             focusItems.forEach((item, index) => {
+                // Add drop zone before each item
+                const dropZone = document.createElement('div');
+                dropZone.className = 'drop-zone';
+                dropZone.dataset.index = index;
+                list.appendChild(dropZone);
+                
                 const itemElement = document.createElement('div');
                 itemElement.className = 'item';
                 itemElement.draggable = true;
@@ -479,7 +667,7 @@
                     <button class="remove-btn" data-index="${index}">×</button>
                 `;
                 
-                // Add event listeners
+                // Add event listeners for remove button
                 const removeBtn = itemElement.querySelector('.remove-btn');
                 removeBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -488,32 +676,76 @@
                     removeItem(idx);
                 });
                 
-                // Drag and drop
+                // Drag and drop event listeners
                 itemElement.addEventListener('dragstart', (e) => {
                     draggedIndex = index;
+                    draggedElement = itemElement;
                     itemElement.classList.add('dragging');
                     e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/html', itemElement.outerHTML);
                 });
                 
-                itemElement.addEventListener('dragend', () => {
+                itemElement.addEventListener('dragend', (e) => {
                     itemElement.classList.remove('dragging');
                     draggedIndex = -1;
+                    draggedElement = null;
+                    
+                    // Remove all drop zone highlights
+                    document.querySelectorAll('.drop-zone').forEach(zone => {
+                        zone.classList.remove('active');
+                    });
                 });
                 
-                itemElement.addEventListener('dragover', (e) => {
+                // Drop zone event listeners
+                dropZone.addEventListener('dragover', (e) => {
                     e.preventDefault();
                     e.dataTransfer.dropEffect = 'move';
+                    dropZone.classList.add('active');
                 });
                 
-                itemElement.addEventListener('drop', (e) => {
+                dropZone.addEventListener('dragleave', (e) => {
+                    dropZone.classList.remove('active');
+                });
+                
+                dropZone.addEventListener('drop', (e) => {
                     e.preventDefault();
-                    if (draggedIndex !== -1 && draggedIndex !== index) {
-                        moveItem(draggedIndex, index);
+                    dropZone.classList.remove('active');
+                    
+                    if (draggedIndex !== -1) {
+                        const targetIndex = parseInt(dropZone.dataset.index);
+                        moveItem(draggedIndex, targetIndex);
                     }
                 });
                 
                 list.appendChild(itemElement);
             });
+            
+            // Add final drop zone at the end
+            const finalDropZone = document.createElement('div');
+            finalDropZone.className = 'drop-zone';
+            finalDropZone.dataset.index = focusItems.length;
+            
+            finalDropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                finalDropZone.classList.add('active');
+            });
+            
+            finalDropZone.addEventListener('dragleave', (e) => {
+                finalDropZone.classList.remove('active');
+            });
+            
+            finalDropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                finalDropZone.classList.remove('active');
+                
+                if (draggedIndex !== -1) {
+                    const targetIndex = parseInt(finalDropZone.dataset.index);
+                    moveItem(draggedIndex, targetIndex - 1);
+                }
+            });
+            
+            list.appendChild(finalDropZone);
         }
         
         function generateWallpaper(items) {
@@ -589,6 +821,7 @@
         document.getElementById('add-item').addEventListener('click', addItem);
         document.getElementById('submit').addEventListener('click', submitFocus);
         document.getElementById('cancel').addEventListener('click', () => window.close());
+        document.getElementById('close-instructions').addEventListener('click', hideInstructions);
 
         // Postpone dropdown
         document.getElementById('postpone').addEventListener('click', (e) => {
@@ -618,9 +851,16 @@
 
         function submitFocus() {
             if (focusItems.length > 0) {
+                // Show confetti animation
+                createConfetti();
+                
                 const wallpaperDataUrl = generateWallpaper(focusItems);
                 ipcRenderer.send('submit-focus', { text: focusItems.join('\n'), wallpaperDataUrl });
-                window.close();
+                
+                // Close window after a brief delay to show confetti
+                setTimeout(() => {
+                    window.close();
+                }, 1000);
             }
         }
 

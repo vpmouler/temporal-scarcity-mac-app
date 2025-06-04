@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain } from 'electron';
+import { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, shell } from 'electron';
 import * as path from 'path';
 import { execSync } from 'child_process';
 import Store from 'electron-store';
@@ -24,7 +24,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 500,
     height: 520,
-    show: false,
+    show: true,
     frame: false,
     resizable: false,
     alwaysOnTop: true,
@@ -52,6 +52,14 @@ function createWindow() {
     // Ensure it's always on top and focused
     mainWindow?.setAlwaysOnTop(true, 'screen-saver');
     mainWindow?.focus();
+    
+    // Check if this is first run and show instructions
+    const hasShownInstructions = store.get('hasShownInstructions', false) as boolean;
+    if (!hasShownInstructions) {
+      // Send instruction event to renderer
+      mainWindow?.webContents.send('show-first-time-instructions');
+      store.set('hasShownInstructions', true);
+    }
   });
 
   // When window is closed, don't destroy it, just hide it
@@ -278,6 +286,11 @@ ipcMain.on('submit-focus', async (_event: Electron.IpcMainEvent, data: { text: s
     console.log('========== Focus Submission ==========');
     console.log('Focus text:', data.text);
     
+    // Temporarily disable always on top to allow system dialogs
+    if (mainWindow) {
+      mainWindow.setAlwaysOnTop(false);
+    }
+    
     // Mark as completed for today
     const today = new Date().toDateString();
     store.set('dailyFocusCompleted', today);
@@ -354,6 +367,16 @@ ipcMain.on('submit-focus', async (_event: Electron.IpcMainEvent, data: { text: s
     execSync(`osascript -e '${script}'`);
     
     console.log('Wallpaper set successfully');
+    
+    // Show desktop after setting wallpaper
+    try {
+      // Hide all applications and show desktop
+      execSync(`osascript -e 'tell application "System Events" to key code 103 using {command down}'`);
+      console.log('Desktop brought to front');
+    } catch (desktopError) {
+      console.log('Could not bring desktop to front:', desktopError);
+    }
+    
     console.log('===================================');
     
     // Hide the window instead of closing it
@@ -362,6 +385,10 @@ ipcMain.on('submit-focus', async (_event: Electron.IpcMainEvent, data: { text: s
     }
   } catch (error) {
     console.error('Error in submit-focus:', error);
+    // Re-enable always on top even if there was an error
+    if (mainWindow) {
+      mainWindow.setAlwaysOnTop(true, 'screen-saver');
+    }
   }
 });
 
@@ -410,10 +437,13 @@ app.whenReady().then(async () => {
   
   // Schedule daily prompt
   schedulePrompt();
+  
+  // Show window immediately on first launch
+  createWindow();
 
   app.on('activate', () => {
-    // On macOS, don't create window on activate since we're menu bar only
-    console.log('App activated');
+    // On macOS, create window on activate for immediate visibility
+    createWindow();
   });
 });
 
