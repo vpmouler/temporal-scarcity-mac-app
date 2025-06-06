@@ -23,10 +23,7 @@ A minimalist desktop application that prompts you with a daily focus question an
 
 ## 📥 Download
 
-Download the latest version from the [GitHub Releases](../../releases/latest) page:
-
-- **Intel Macs**: Download the `x64` version
-- **Apple Silicon Macs (M1/M2/M3)**: Download the `arm64` version
+Download the latest version from the [GitHub Releases](../../releases/latest) page.
 
 ## 🚀 Installation
 
